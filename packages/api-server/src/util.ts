@@ -73,3 +73,19 @@ export function validateHexString(hex: string): boolean {
 export function validateHexNumber(hex: string): boolean {
   return /^0x(0|[0-9a-fA-F]+)$/.test(hex);
 }
+
+/**
+ *
+ * @param gasUsed
+ * @param percent Magnify one hundred times, e.g. 0.12 -> 12n
+ */
+export function enlargeGasUsed(gasUsed: bigint, percent: bigint) {
+  const multiplier = BigInt(100);
+  const value = gasUsed * (multiplier + percent);
+  const newGasUsed = value / multiplier;
+  const remainder = value % multiplier;
+  if (remainder > 0) {
+    return newGasUsed + BigInt(1);
+  }
+  return newGasUsed;
+}

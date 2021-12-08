@@ -52,7 +52,7 @@ import { filterWeb3Transaction } from "../../filter-web3-tx";
 import { Abi, ShortAddress, ShortAddressType } from "@polyjuice-provider/base";
 import { SUDT_ERC20_PROXY_ABI, allowedAddresses } from "../../erc20";
 import { FilterManager } from "../../cache";
-import { toHex } from "../../util";
+import { enlargeGasUsed, toHex } from "../../util";
 import { parseGwError } from "../gw-error";
 import { evmcCodeTypeMapping } from "../gw-error";
 
@@ -478,7 +478,11 @@ export class Eth {
         "0x" + BigInt(polyjuiceSystemLog.gasUsed).toString(16)
       );
 
-      return "0x" + BigInt(polyjuiceSystemLog.gasUsed).toString(16);
+      // enlarge gas used
+      const percent = BigInt(envConfig.gasUsedEnlargePercent || "1");
+      const gasUsed = enlargeGasUsed(polyjuiceSystemLog.gasUsed, percent);
+
+      return "0x" + BigInt(gasUsed).toString(16);
     } catch (error: any) {
       throw new Web3Error(error.message);
     }
