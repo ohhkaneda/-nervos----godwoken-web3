@@ -7,8 +7,8 @@ use std::{convert::TryInto, usize};
 
 // 128KB
 pub const GW_L2TX_ARGS_MAX_SIZE: u32 = 128 * 1024;
-// 4KB
-pub const GW_USER_LOG_DATA_MAX_SIZE: u32 = 4 * 1024;
+// 12KB
+pub const GW_USER_LOG_DATA_MAX_SIZE: u32 = 12 * 1024;
 
 pub const GW_LOG_SUDT_TRANSFER: u8 = 0x0;
 pub const GW_LOG_SUDT_PAY_FEE: u8 = 0x1;
