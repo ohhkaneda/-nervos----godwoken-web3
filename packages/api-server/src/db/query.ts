@@ -7,6 +7,7 @@ import {
   DBTransaction,
   DBLog,
 } from "./types";
+import "./knex";
 import Knex, { Knex as KnexType } from "knex";
 import { LogQueryOption } from "./types";
 import { envConfig } from "../base/env-config";
@@ -50,7 +51,8 @@ export class Query {
     const blockData = await this.knex<DBBlock>("blocks")
       .select("number")
       .orderBy("number", "desc")
-      .first();
+      .first()
+      .cache();
 
     return toBigIntOpt(blockData?.number);
   }
@@ -58,7 +60,8 @@ export class Query {
   async getTipBlock(): Promise<Block | undefined> {
     const block = await this.knex<DBBlock>("blocks")
       .orderBy("number", "desc")
-      .first();
+      .first()
+      .cache();
 
     if (!block) {
       return undefined;
@@ -81,8 +84,10 @@ export class Query {
   private async getBlock(
     params: Readonly<Partial<KnexType.MaybeRawRecord<DBBlock>>>
   ): Promise<Block | undefined> {
-    const block = await this.knex<DBBlock>("blocks").where(params).first();
-
+    const block = await this.knex<DBBlock>("blocks")
+      .where(params)
+      .first()
+      .cache();
     if (!block) {
       return undefined;
     }
@@ -100,7 +105,8 @@ export class Query {
     const blocks = await this.knex<DBBlock>("blocks")
       .where("number", ">", minBlockNumber.toString())
       .andWhere("number", "<=", maxBlockNumber.toString())
-      .orderBy("number", "asc");
+      .orderBy("number", "asc")
+      .cache();
     return blocks.map((block) => formatBlock(block));
   }
 
@@ -114,7 +120,8 @@ export class Query {
     }>("blocks")
       .select("hash", "number")
       .where("number", ">", number.toString())
-      .orderBy("number", order);
+      .orderBy("number", order)
+      .cache();
     return arrayOfHashAndNumber.map((hn) => {
       return { hash: bufferToHex(hn.hash), number: BigInt(hn.number) };
     });
@@ -133,9 +140,9 @@ export class Query {
   private async getTransactions(
     params: Readonly<Partial<KnexType.MaybeRawRecord<DBTransaction>>>
   ): Promise<Transaction[]> {
-    const transactions = await this.knex<DBTransaction>("transactions").where(
-      params
-    );
+    const transactions = await this.knex<DBTransaction>("transactions")
+      .where(params)
+      .cache();
 
     return transactions.map((tx) => formatTransaction(tx));
   }
@@ -179,7 +186,8 @@ export class Query {
   ): Promise<Transaction | undefined> {
     const transaction = await this.knex<DBTransaction>("transactions")
       .where(params)
-      .first();
+      .first()
+      .cache();
 
     if (transaction == null) {
       return undefined;
@@ -207,7 +215,8 @@ export class Query {
   ): Promise<Hash[]> {
     const transactionHashes = await this.knex<DBTransaction>("transactions")
       .select("hash")
-      .where(params);
+      .where(params)
+      .cache();
 
     return transactionHashes.map((tx) => bufferToHex(tx.hash));
   }
@@ -231,7 +240,8 @@ export class Query {
   ): Promise<Hash[]> {
     const transactionHashes = await this.knex<DBTransaction>("transactions")
       .select("eth_tx_hash")
-      .where(params);
+      .where(params)
+      .cache();
 
     return transactionHashes.map((tx) => bufferToHex(tx.eth_tx_hash));
   }
@@ -254,7 +264,8 @@ export class Query {
   ): Promise<number> {
     const data = await this.knex<DBTransaction>("transactions")
       .where(params)
-      .count();
+      .count()
+      .cache();
 
     const count: number = +data[0].count;
 
@@ -266,21 +277,27 @@ export class Query {
   ): Promise<[Transaction, Log[]] | undefined> {
     const tx = await this.knex<DBTransaction>("transactions")
       .where({ hash: hexToBuffer(txHash) })
-      .first();
+      .first()
+      .cache();
 
     if (!tx) {
       return undefined;
     }
 
-    const logs = await this.knex<DBLog>("logs").where({
-      transaction_hash: hexToBuffer(txHash),
-    });
+    const logs = await this.knex<DBLog>("logs")
+      .where({
+        transaction_hash: hexToBuffer(txHash),
+      })
+      .cache();
 
     return [formatTransaction(tx), logs.map((log) => formatLog(log))];
   }
 
   async getTipLog() {
-    let log = await this.knex<DBLog>("logs").orderBy("id", "desc").first();
+    let log = await this.knex<DBLog>("logs")
+      .orderBy("id", "desc")
+      .first()
+      .cache();
     if (log != null) {
       return formatLog(log);
     }
@@ -302,7 +319,8 @@ export class Query {
       .where("id", ">", queryLastPollId.toString(10))
       .orderBy("id", "asc")
       .offset(queryOffset)
-      .limit(MAX_QUERY_NUMBER);
+      .limit(MAX_QUERY_NUMBER)
+      .cache();
     return logs.map((log) => formatLog(log));
   }
 
@@ -331,11 +349,13 @@ export class Query {
       .where("block_number", "<=", toBlock)
       .where("id", ">", queryLastPollId.toString(10))
       .offset(queryOffset)
-      .limit(MAX_QUERY_NUMBER + 1);
+      .limit(MAX_QUERY_NUMBER + 1)
+      .cache();
     let selectLogsJoinTransactions = this.knex<DBLog>("transactions")
       .with("logs", selectLogs)
       .select("logs.*", "transactions.eth_tx_hash")
-      .join("logs", { "logs.transaction_hash": "transactions.hash" });
+      .join("logs", { "logs.transaction_hash": "transactions.hash" })
+      .cache();
     let logs: DBLog[] = await selectLogsJoinTransactions;
     return logs
       .map((log) => formatLog(log))
