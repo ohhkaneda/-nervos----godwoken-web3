@@ -349,8 +349,7 @@ export class Query {
       .where("block_number", "<=", toBlock)
       .where("id", ">", queryLastPollId.toString(10))
       .offset(queryOffset)
-      .limit(MAX_QUERY_NUMBER + 1)
-      .cache();
+      .limit(MAX_QUERY_NUMBER + 1);
     let selectLogsJoinTransactions = this.knex<DBLog>("transactions")
       .with("logs", selectLogs)
       .select("logs.*", "transactions.eth_tx_hash")
